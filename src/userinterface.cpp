@@ -198,6 +198,16 @@ bool CUserInterface::Initialize (void)
 	return true;
 }
 
+void CUserInterface::MIDIEventHandler (CUIMenu::TMenuEvent Event)
+{
+	m_Menu.EventHandler (Event);
+}
+
+const void CUserInterface::GetParameterInfos (CUIMenu::TCParameterInfo *pParamInfo, size_t n)
+{
+	m_Menu.GetParameterInfos (pParamInfo, n);
+}
+
 void CUserInterface::Process (void)
 {
 	if (m_pLCDBuffered)
@@ -213,6 +223,7 @@ void CUserInterface::Process (void)
 void CUserInterface::ParameterChanged (void)
 {
 	m_Menu.EventHandler (CUIMenu::MenuEventUpdateParameter);
+	m_pMiniDexed->UpdateDAWState ();
 }
 
 void CUserInterface::DisplayChanged (void)
