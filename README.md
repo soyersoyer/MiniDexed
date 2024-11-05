@@ -1,3 +1,152 @@
+# MiniDexed Arturia fork
+
+This is a fork of Minidexed that integrates better with Arturia keyboards.
+
+Maybe someday it will be part of the MiniDexed
+
+## Enabling
+
+This feature can be enabled in the minidexed.ini with:
+```
+DAWControllerEnabled=1
+```
+
+## Features
+
+### Controller Display, Main Encoder
+The controller display in DAW mode shows the MiniDexed menu.
+
+With the main encoder you can navigate in the menu.
+
+The Home is the shift+Main click
+
+Supported:
+- MiniLab 3 (tested)
+- KeyLab mkII (tested)
+- Keylab Essential
+- Keylab Essential 3
+
+### Energy efficiency
+This version uses a little less power so it runs cooler thanks to #3.
+
+### MiniLab 3 features:
+
+#### Encoders
+
+By holding down shift will bring up an overlay menu, where you can see and adjust what the encoders do.
+
+You can use the main encoder to select the current encoding page.
+
+Short pressing the shift will show the actual values.
+
+Holding down the shift will goes back to the normal menu.
+
+This overlay menu is context-aware, it is different if you are in the effect menu, or in a TG menu.
+
+If you are in a TG menu, it only affects the selected TG.
+
+If you are in the main menu, it affects the TGs on the first TG's channel.
+
+- Main Overlay 1 (default)
+  - Cutoff, Resonance, ReverbSend, None
+  - PortamentoTime, Program, Volume, None
+  - Faders: ChG 1 Vol, ChG 2 Vol, ChG 3 Vol, ChG 4 Vol
+
+- Effect Overlay
+  - CompressorEnable, ReverbEnable, ReverbSize, ReverbHighDamp
+  - ReverbLowDamp, ReverbLowPass, ReverbDiffusion, ReverbLevel
+
+- Main Overlay 2
+  - Pan1, Pan2, Pan3, Pan4
+  - Det1, Det2, Det3, Det4
+  - Faders: TG1 Vol, TG2 Vol, TG3 Vol, TG4 Vol
+
+- Main Overlay 3
+  - Pan5, Pan6, Pan7, Pan8
+  - Det5, Det6, Det7, Det8
+  - Faders: TG5 Vol, TG6 Vol, TG7 Vol, TG8 Vol
+
+- TG Overlay 1
+  - Cutoff, Resonance, ReverbSend, MasterTune
+  - PortamentoTime, Program, Volume, Pan
+  - Faders: Cutoff, Resonance, ReverbSend, Volume
+
+- TG Overlay 2
+  - MIDIChannel, None, None, PitchBendRange
+  - PortamentoGlissando, MonoMode, None, PitchBendStep
+
+- TG Overlay 3
+  - MWRange, MWPitch, FCRange, FCPitch
+  - MWEGBias, MWAmplitude, FCEGBias, FCAmplitude
+
+- TG Overlay 4
+  - BCRange, BCPitch, ATRange, ATPitch
+  - BCEGBias, BCAmplitude, ATEGBias, ATAmplitude
+
+- Voice Overlay 1
+  - ALGORITHM, FEEDBACK, TRANSPOSE, None,
+  - None, None, None, None
+
+- Voice Overlay 2
+  - PITCH_EG_R1, PITCH_EG_R2, PITCH_EG_R3, PITCH_EG_R4
+  - PITCH_EG_L1, PITCH_EG_L2, PITCH_EG_L3, PITCH_EG_L4
+  - Faders: PITCH_EG_L1, PITCH_EG_L2, PITCH_EG_L3, PITCH_EG_L4
+
+- Voice Overlay 3
+  - OSC_KEY_SYNC, LFO_SPEED, LFO_DELAY, LFO_PITCH_MOD_DEP
+  - LFO_SYNC, LFO_WAVE, LFO_PITCH_MOD_SENS, LFO_AMP_MOD_DEP
+
+- OP Overlay 1
+  - OP_OUTPUT_LEV, OP_FREQ_COARSE, OP_FREQ_FINE, OP_OSC_DETUNE,
+  - OP_OSC_MODE, OP_ENABLE, None, None
+
+- OP Overlay 2
+  - OP_EG_R1, OP_EG_R2, P_EG_R3, OP_EG_R4
+  - OP_EG_L1, OP_EG_L2, OP_EG_L3, OP_EG_L4,
+  - Faders: OP_EG_L1, OP_EG_L2, OP_EG_L3, OP_EG_L4,
+
+- OP Overlay 3
+  - OP_LEV_SCL_BRK_PT, OP_SCL_LEFT_DEPTH, OP_SCL_RGHT_DEPTH, OP_AMP_MOD_SENS
+  - OP_OSC_RATE_SCALE, OP_SCL_LEFT_CURVE, OP_SCL_RGHT_CURVE, OP_KEY_VEL_SENS
+
+In the Main overlay you can reach the TG and voice overlays also.
+
+In the voice overlay there is a page for every OP control also, with the 6 operator and with an encoder which sets all.
+
+#### Pads on Bank A
+- Mono/Poly mode
+- Portamento enable/disable, hard press to enable/disable Portamento Glissando
+- Sostenuto
+- Sustain
+- All Sound Off
+- Hold2
+- None
+- Channel AfterTouch Pad
+
+#### Pads on Bank B
+- Short press a TG will enable/disable that TG
+- Long press will enable/disable all the TG on the TG's channel
+- Hard press will enable only that TG (it uses the pad's AT messsages)
+
+
+### KeyLab mkII features
+
+#### Faders
+- The faders adjust the volume of the MIDI channels of the current performance
+
+#### DAW buttons
+- Mono/Poly mode
+- Portamento enable/disable, hard press to enable/disable Portamento Glissando
+- Sostenuto
+- Sustain
+- Hold2
+
+#### Track select buttons
+- Short press a TG will enable/disable that TG
+- Long press will enable only that TG
+
+
+
 # MiniDexed ![Github Build Status](https://github.com/probonopd/MiniDexed/actions/workflows/build.yml/badge.svg)
 
 ![minidexed](https://user-images.githubusercontent.com/2480569/161813414-bb156a1c-efec-44c0-802a-8926412a08e0.jpg)
