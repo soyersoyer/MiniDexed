@@ -944,6 +944,7 @@ void CMiniDexed::SetParameter (TParameter Parameter, int nValue)
 			assert (m_pTG[nTG]);
 			m_pTG[nTG]->setCompressor (!!nValue);
 		}
+		m_UI.ParameterChanged ();
 		break;
 
 	case ParameterReverbEnable:
@@ -951,6 +952,7 @@ void CMiniDexed::SetParameter (TParameter Parameter, int nValue)
 		m_ReverbSpinLock.Acquire ();
 		reverb->set_bypass (!nValue);
 		m_ReverbSpinLock.Release ();
+		m_UI.ParameterChanged ();
 		break;
 
 	case ParameterReverbSize:
@@ -958,6 +960,7 @@ void CMiniDexed::SetParameter (TParameter Parameter, int nValue)
 		m_ReverbSpinLock.Acquire ();
 		reverb->size (nValue / 99.0f);
 		m_ReverbSpinLock.Release ();
+		m_UI.ParameterChanged ();
 		break;
 
 	case ParameterReverbHighDamp:
@@ -965,6 +968,7 @@ void CMiniDexed::SetParameter (TParameter Parameter, int nValue)
 		m_ReverbSpinLock.Acquire ();
 		reverb->hidamp (nValue / 99.0f);
 		m_ReverbSpinLock.Release ();
+		m_UI.ParameterChanged ();
 		break;
 
 	case ParameterReverbLowDamp:
@@ -972,6 +976,7 @@ void CMiniDexed::SetParameter (TParameter Parameter, int nValue)
 		m_ReverbSpinLock.Acquire ();
 		reverb->lodamp (nValue / 99.0f);
 		m_ReverbSpinLock.Release ();
+		m_UI.ParameterChanged ();
 		break;
 
 	case ParameterReverbLowPass:
@@ -979,6 +984,7 @@ void CMiniDexed::SetParameter (TParameter Parameter, int nValue)
 		m_ReverbSpinLock.Acquire ();
 		reverb->lowpass (nValue / 99.0f);
 		m_ReverbSpinLock.Release ();
+		m_UI.ParameterChanged ();
 		break;
 
 	case ParameterReverbDiffusion:
@@ -986,6 +992,7 @@ void CMiniDexed::SetParameter (TParameter Parameter, int nValue)
 		m_ReverbSpinLock.Acquire ();
 		reverb->diffusion (nValue / 99.0f);
 		m_ReverbSpinLock.Release ();
+		m_UI.ParameterChanged ();
 		break;
 
 	case ParameterReverbLevel:
@@ -993,6 +1000,7 @@ void CMiniDexed::SetParameter (TParameter Parameter, int nValue)
 		m_ReverbSpinLock.Acquire ();
 		reverb->level (nValue / 99.0f);
 		m_ReverbSpinLock.Release ();
+		m_UI.ParameterChanged ();
 		break;
 
 	case ParameterPerformanceSelectChannel:
@@ -1146,6 +1154,7 @@ void CMiniDexed::SetVoiceParameter (uint8_t uchOffset, uint8_t uchValue, unsigne
 			}
 
 			m_pTG[nTG]->setOPAll (m_uchOPMask[nTG]);
+			m_UI.ParameterChanged ();
 
 			return;
 		}
@@ -1157,6 +1166,7 @@ void CMiniDexed::SetVoiceParameter (uint8_t uchOffset, uint8_t uchValue, unsigne
 	assert (uchOffset < 156);
 
 	m_pTG[nTG]->setVoiceDataElement (uchOffset, uchValue);
+	m_UI.ParameterChanged ();
 }
 
 uint8_t CMiniDexed::GetVoiceParameter (uint8_t uchOffset, unsigned nOP, unsigned nTG)
@@ -1812,6 +1822,33 @@ void CMiniDexed::setMasterVolume (float32_t vol)
 	nMasterVolume=vol;
 }
 
+void CMiniDexed::DisplayWrite (const char *pMenu, const char *pParam, const char *pValue,
+			       bool bArrowDown, bool bArrowUp)
+{
+	m_UI.DisplayWrite (pMenu, pParam, pValue, bArrowDown, bArrowUp);
+
+	for (unsigned i = 0; i < CConfig::MaxUSBMIDIDevices; i++)
+	{
+		m_pMIDIKeyboard[i]->DisplayWrite (pMenu, pParam, pValue, bArrowDown, bArrowUp);
+	}
+}
+
+void CMiniDexed::UpdateDAWState ()
+{
+	for (unsigned i = 0; i < CConfig::MaxUSBMIDIDevices; i++)
+	{
+		m_pMIDIKeyboard[i]->UpdateDAWState ();
+	}
+}
+
+void CMiniDexed::UpdateDAWMenu (CUIMenu::TCPageType Type, s8 ucPage, u8 ucOP, u8 ucTG)
+{
+	for (unsigned i = 0; i < CConfig::MaxUSBMIDIDevices; i++)
+	{
+		m_pMIDIKeyboard[i]->UpdateDAWMenu (Type, ucPage, ucOP, ucTG);
+	}
+}
+
 std::string CMiniDexed::GetPerformanceFileName(unsigned nID)
 {
 	return m_PerformanceConfig.GetPerformanceFileName(nID);
@@ -1975,6 +2012,7 @@ void CMiniDexed::LoadPerformanceParameters(void)
 			m_pTG[nTG]->loadVoiceParameters(tVoiceData); 
 			}
 			setMonoMode(m_PerformanceConfig.GetMonoMode(nTG) ? 1 : 0, nTG); 
+			setEnabled(1, nTG);
 			SetReverbSend (m_PerformanceConfig.GetReverbSend (nTG), nTG);
 					
 			setModWheelRange (m_PerformanceConfig.GetModulationWheelRange (nTG),  nTG);
