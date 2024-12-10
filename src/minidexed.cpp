@@ -115,6 +115,8 @@ CMiniDexed::CMiniDexed (CConfig *pConfig, CInterruptSystem *pInterrupt,
 		
 		m_nReverbSend[i] = 0;
 
+		m_bEnabled[i] = 1;
+
 		// Active the required number of active TGs
 		if (i<m_nToneGenerators)
 		{
@@ -1100,6 +1102,7 @@ void CMiniDexed::SetTGParameter (TTGParameter Parameter, int nValue, unsigned nT
 	case TGParameterPortamentoGlissando:	setPortamentoGlissando (nValue, nTG);	break;
 	case TGParameterPortamentoTime:		setPortamentoTime (nValue, nTG);	break;
 	case TGParameterMonoMode:		setMonoMode (nValue , nTG);	break; 
+	case TGParameterEnabled:		setEnabled (nValue, nTG);	break;
 	
 	case TGParameterMWRange:					setModController(0, 0, nValue, nTG); break;
 	case TGParameterMWPitch:					setModController(0, 1, nValue, nTG); break;
@@ -1158,6 +1161,7 @@ int CMiniDexed::GetTGParameter (TTGParameter Parameter, unsigned nTG)
 	case TGParameterPortamentoGlissando:	return m_nPortamentoGlissando[nTG];
 	case TGParameterPortamentoTime:		return m_nPortamentoTime[nTG];
 	case TGParameterMonoMode:		return m_bMonoMode[nTG] ? 1 : 0; 
+	case TGParameterEnabled:		return m_bEnabled[nTG] ? 1 : 0; 
 	
 	case TGParameterMWRange:					return getModController(0, 0, nTG);
 	case TGParameterMWPitch:					return getModController(0, 1, nTG);
@@ -1605,6 +1609,17 @@ void CMiniDexed::setMonoMode(uint8_t mono, uint8_t nTG)
 	m_bMonoMode[nTG]= mono != 0; 
 	m_pTG[nTG]->setMonoMode(constrain(mono, 0, 1));
 	m_pTG[nTG]->doRefreshVoice();
+	m_UI.ParameterChanged ();
+}
+
+void CMiniDexed::setEnabled (uint8_t enabled, uint8_t nTG)
+{
+	assert (nTG < CConfig::AllToneGenerators);
+	if (nTG >= m_nToneGenerators) return;  // Not an active TG
+	assert (m_pTG[nTG]);
+
+	m_bEnabled[nTG] = enabled != 0;
+	
 	m_UI.ParameterChanged ();
 }
 
@@ -2056,6 +2071,7 @@ void CMiniDexed::LoadPerformanceParameters(void)
 			setOPMask(0b111111, nTG);
 			}
 			setMonoMode(m_PerformanceConfig.GetMonoMode(nTG) ? 1 : 0, nTG); 
+			setEnabled(1, nTG);
 			SetReverbSend (m_PerformanceConfig.GetReverbSend (nTG), nTG);
 					
 			setModWheelRange (m_PerformanceConfig.GetModulationWheelRange (nTG),  nTG);
