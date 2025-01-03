@@ -435,7 +435,7 @@ void CMiniDexed::Run (unsigned nCore)
 		{
 			while (m_CoreStatus[nCore] != CoreStatusIdle)
 			{
-				// just wait
+				WaitForEvent ();
 			}
 		}
 
@@ -449,9 +449,11 @@ void CMiniDexed::Run (unsigned nCore)
 		while (1)
 		{
 			m_CoreStatus[nCore] = CoreStatusIdle;		// ready to be kicked
+			SendIPI (1, IPI_USER);
+
 			while (m_CoreStatus[nCore] == CoreStatusIdle)
 			{
-				// just wait
+				WaitForEvent ();
 			}
 
 			// now kicked from core 1
@@ -1248,6 +1250,7 @@ void CMiniDexed::ProcessSound (void)
 		{
 			assert (m_CoreStatus[nCore] == CoreStatusIdle);
 			m_CoreStatus[nCore] = CoreStatusBusy;
+			SendIPI (nCore, IPI_USER);
 		}
 
 		// process the TGs assigned to core 1
@@ -1263,7 +1266,7 @@ void CMiniDexed::ProcessSound (void)
 		{
 			while (m_CoreStatus[nCore] != CoreStatusIdle)
 			{
-				// just wait
+				WaitForEvent ();
 			}
 		}
 
