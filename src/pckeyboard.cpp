@@ -78,6 +78,8 @@ CPCKeyboard::~CPCKeyboard (void)
 
 void CPCKeyboard::Process (boolean bPlugAndPlayUpdated)
 {
+	ProcessMIDIMessages ();
+
 	if (!bPlugAndPlayUpdated)
 	{
 		return;

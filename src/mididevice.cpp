@@ -133,6 +133,40 @@ u8 CMIDIDevice::GetChannel (unsigned nTG) const
 
 void CMIDIDevice::MIDIMessageHandler (const u8 *pMessage, size_t nLength, unsigned nCable)
 {
+	TSendQueueEntry Entry;
+	Entry.pMessage = new u8[nLength];
+	Entry.nLength = nLength;
+	Entry.nCable = nCable;
+
+	memcpy (Entry.pMessage, pMessage, nLength);
+
+	//m_MIDISpinLock.Acquire ();
+	m_RecvQueue.push (Entry);
+	//m_MIDISpinLock.Release ();
+}
+
+void CMIDIDevice::ProcessMIDIMessages ()
+{
+	while (true)
+	{
+		m_MIDISpinLock.Acquire ();
+		if (m_RecvQueue.empty ())
+		{
+			m_MIDISpinLock.Release ();
+			return;
+		}
+		
+		TSendQueueEntry Entry = m_RecvQueue.front ();
+		m_RecvQueue.pop ();
+		m_MIDISpinLock.Release ();
+		
+		ProcessMIDIMessage (Entry.pMessage, Entry.nLength, Entry.nCable);
+		delete [] Entry.pMessage;
+	}
+}
+
+void CMIDIDevice::ProcessMIDIMessage (const u8 *pMessage, size_t nLength, unsigned nCable)
+{
 	// The packet contents are just normal MIDI data - see
 	// https://www.midi.org/specifications/item/table-1-summary-of-midi-message
 
@@ -212,7 +246,7 @@ void CMIDIDevice::MIDIMessageHandler (const u8 *pMessage, size_t nLength, unsign
 		return;
 	}
 
-	m_MIDISpinLock.Acquire ();
+	//m_MIDISpinLock.Acquire ();
 
 	u8 ucStatus  = pMessage[0];
 	u8 ucChannel = ucStatus & 0x0F;
@@ -489,7 +523,7 @@ void CMIDIDevice::MIDIMessageHandler (const u8 *pMessage, size_t nLength, unsign
 			}
 		}
 	}
-	m_MIDISpinLock.Release ();
+	//m_MIDISpinLock.Release ();
 }
 
 void CMIDIDevice::AddDevice (const char *pDeviceName)

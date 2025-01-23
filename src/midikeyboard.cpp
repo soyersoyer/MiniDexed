@@ -42,6 +42,8 @@ CMIDIKeyboard::~CMIDIKeyboard (void)
 
 void CMIDIKeyboard::Process (boolean bPlugAndPlayUpdated)
 {
+	ProcessMIDIMessages ();
+
 	while (!m_SendQueue.empty ())
 	{
 		TSendQueueEntry Entry = m_SendQueue.front ();

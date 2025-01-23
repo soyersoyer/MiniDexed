@@ -25,6 +25,7 @@
 
 #include "config.h"
 #include <string>
+#include <queue>
 #include <unordered_map>
 #include <circle/types.h>
 #include <circle/spinlock.h>
@@ -58,6 +59,8 @@ public:
 
 protected:
 	void MIDIMessageHandler (const u8 *pMessage, size_t nLength, unsigned nCable = 0);
+	void ProcessMIDIMessages ();
+	void ProcessMIDIMessage (const u8 *pMessage, size_t nLength, unsigned nCable = 0);
 	void AddDevice (const char *pDeviceName);
 	void HandleSystemExclusive(const uint8_t* pMessage, const size_t nLength, const unsigned nCable, const uint8_t nTG);
 
@@ -82,6 +85,14 @@ private:
 	static TDeviceMap s_DeviceMap;
 
 	CSpinLock m_MIDISpinLock;
+
+	struct TSendQueueEntry
+	{
+		u8	*pMessage;
+		size_t	 nLength;
+		unsigned nCable;
+	};
+	std::queue<TSendQueueEntry> m_RecvQueue;
 };
 
 #endif
