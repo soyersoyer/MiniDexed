@@ -34,7 +34,7 @@ class CDexedAdapter : public Dexed
 {
 public:
 	CDexedAdapter (uint8_t maxnotes, int rate)
-	: Dexed (maxnotes, rate)
+	: Dexed (maxnotes, rate), m_SpinLock (TASK_LEVEL)
 	{
 	}
 
@@ -59,10 +59,19 @@ public:
 		m_SpinLock.Release ();
 	}
 
+	void notesOff ()
+	{
+		m_SpinLock.Acquire ();
+		Dexed::notesOff ();
+		m_SpinLock.Release ();
+	}
+
 	void getSamples (float32_t* buffer, uint16_t n_samples)
 	{
 		m_SpinLock.Acquire ();
+		DataMemBarrier ();
 		Dexed::getSamples (buffer, n_samples);
+		DataMemBarrier ();
 		m_SpinLock.Release ();
 	}
 

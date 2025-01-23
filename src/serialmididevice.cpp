@@ -63,6 +63,8 @@ boolean CSerialMIDIDevice::Initialize (void)
 
 void CSerialMIDIDevice::Process (void)
 {
+	ProcessMIDIMessages ();
+
 	m_SendBuffer.Update ();
 
 	// Read serial MIDI data
