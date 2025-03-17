@@ -5,7 +5,7 @@ env:
 
 on:
   push:
-    branches: [ main ]
+    branches: [ sdawdisplay ]
   pull_request:
 
 jobs:
@@ -167,8 +167,8 @@ jobs:
           zip -r ../MiniDexed_${{ github.run_number }}_${{ needs.build64.outputs.git_info }}.zip .
           cd ..
 
-      - name: Upload to GitHub Releases (only when building from main branch)
-        if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Upload to GitHub Releases (only when building from sdawdisplay branch)
+        if: ${{ github.ref == 'refs/heads/sdawdisplay' }}
         run: |
           set -ex
           export UPLOADTOOL_ISPRERELEASE=true
