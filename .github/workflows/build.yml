@@ -5,7 +5,7 @@ env:
 
 on:
   push:
-    branches: [ main ]
+    branches: [ sdawdisplay ]
   pull_request:
 
 jobs:
@@ -96,8 +96,8 @@ jobs:
       with:
         name: ${{ env.artifactName }} # Exported above
         path: ./sdcard/*
-    - name: Upload to GitHub Releases (only when building from main branch)
-      if: ${{ github.ref == 'refs/heads/main' }}
+    - name: Upload to GitHub Releases (only when building from sdawdisplay branch)
+      if: ${{ github.ref == 'refs/heads/sdawdisplay' }}
       run: |
            set -ex
            wget -c https://github.com/probonopd/uploadtool/raw/master/upload.sh
