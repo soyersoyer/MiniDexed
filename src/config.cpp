@@ -58,6 +58,7 @@ void CConfig::Load (void)
 
 	m_nSampleRate = m_Properties.GetNumber ("SampleRate", 48000);
 	m_bQuadDAC8Chan = m_Properties.GetNumber ("QuadDAC8Chan", 0) != 0;
+	m_bUnZeroData = m_Properties.GetNumber ("UnZeroData", 0) != 0;
 	if (m_SoundDevice == "hdmi") {
 		m_nChunkSize = m_Properties.GetNumber ("ChunkSize", 384*6);
 	}
@@ -297,6 +298,11 @@ unsigned CConfig::GetEngineType (void) const
 bool CConfig::GetQuadDAC8Chan (void) const
 {
 	return m_bQuadDAC8Chan;
+}
+
+bool CConfig::GetUnZeroData (void) const
+{
+	return m_bUnZeroData;
 }
 
 unsigned CConfig::GetMIDIBaudRate (void) const

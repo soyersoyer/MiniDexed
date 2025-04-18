@@ -118,6 +118,7 @@ public:
 	bool GetChannelsSwapped (void) const;
 	unsigned GetEngineType (void) const;
 	bool GetQuadDAC8Chan (void) const; // false if not specified
+	bool GetUnZeroData (void) const; // false if not specified
 
 	// MIDI
 	unsigned GetMIDIBaudRate (void) const;
@@ -256,6 +257,7 @@ private:
 	bool m_bChannelsSwapped;
 	unsigned m_EngineType;
 	bool m_bQuadDAC8Chan;
+	bool m_bUnZeroData;
 
 	unsigned m_nMIDIBaudRate;
 	std::string m_MIDIThruIn;

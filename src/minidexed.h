@@ -304,6 +304,7 @@ private:
 	CSerialMIDIDevice m_SerialMIDI;
 	bool m_bUseSerial;
 	bool m_bQuadDAC8Chan;
+	bool m_bUnZeroData;
 
 	CSoundBaseDevice *m_pSoundDevice;
 	bool m_bChannelsSwapped;

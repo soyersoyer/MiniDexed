@@ -43,6 +43,7 @@ CMiniDexed::CMiniDexed (CConfig *pConfig, CInterruptSystem *pInterrupt,
 	m_SerialMIDI (this, pInterrupt, pConfig, &m_UI),
 	m_bUseSerial (false),
 	m_bQuadDAC8Chan (false),
+	m_bUnZeroData (false),
 	m_pSoundDevice (0),
 	m_bChannelsSwapped (pConfig->GetChannelsSwapped ()),
 #ifdef ARM_ALLOW_MULTI_CORE
@@ -187,6 +188,8 @@ CMiniDexed::CMiniDexed (CConfig *pConfig, CInterruptSystem *pInterrupt,
 								  CI2SSoundBaseDevice::DeviceModeTXOnly,
 								  2);  // 2 channels - L+R
 		}
+
+		m_bUnZeroData = pConfig->GetUnZeroData ();
 	}
 	else if (strcmp (pDeviceName, "hdmi") == 0)
 	{
@@ -1309,6 +1312,11 @@ void CMiniDexed::ProcessSound (void)
 				arm_fill_q15(0, tmp_int, nFrames*Channels);
 			}
 
+			if (m_bUnZeroData)
+				for (uint8_t tg = 0; tg < Channels; tg++)
+					if (tmp_int[(nFrames - 1) * Channels + tg] == 0)
+						tmp_int[(nFrames - 1) * Channels + tg]++;
+
 			if (m_pSoundDevice->Write (tmp_int, sizeof(tmp_int)) != (int) sizeof(tmp_int))
 			{
 				LOGERR ("Sound data dropped");
@@ -1393,6 +1401,10 @@ void CMiniDexed::ProcessSound (void)
 			{
 				arm_fill_q15(0, tmp_int, nFrames * 2);
 			}
+
+			if (m_bUnZeroData)
+				if (tmp_int[nFrames * 2 - 1] == 0)
+					tmp_int[nFrames * 2 - 1]++;
 
 			if (m_pSoundDevice->Write (tmp_int, sizeof(tmp_int)) != (int) sizeof(tmp_int))
 			{
