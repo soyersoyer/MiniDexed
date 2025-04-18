@@ -28,6 +28,8 @@
 #include <stdio.h>
 #include <assert.h>
 
+#include "arm_float_to_q23.h"
+
 LOGMODULE ("minidexed");
 
 CMiniDexed::CMiniDexed (CConfig *pConfig, CInterruptSystem *pInterrupt,
@@ -336,7 +338,7 @@ bool CMiniDexed::Initialize (void)
 		return false;
 	}
 
-	m_pSoundDevice->SetWriteFormat (SoundFormatSigned16, Channels);
+	m_pSoundDevice->SetWriteFormat (SoundFormatSigned24_32, Channels);
 
 	m_nQueueSizeFrames = m_pSoundDevice->GetQueueSizeFrames ();
 
@@ -1237,8 +1239,8 @@ void CMiniDexed::ProcessSound (void)
 		m_pTG[0]->getSamples (SampleBuffer, nFrames);
 
 		// Convert single float array (mono) to int16 array
-		int16_t tmp_int[nFrames];
-		arm_float_to_q15(SampleBuffer,tmp_int,nFrames);
+		int32_t tmp_int[nFrames];
+		arm_float_to_q23(SampleBuffer,tmp_int,nFrames);
 
 		if (m_pSoundDevice->Write (tmp_int, sizeof(tmp_int)) != (int) sizeof(tmp_int))
 		{
@@ -1306,7 +1308,7 @@ void CMiniDexed::ProcessSound (void)
 			// Note: one TG per audio channel; output=mono; no processing.
 			const int Channels = 8;  // One TG per channel
 			float32_t tmp_float[nFrames*Channels];
-			int16_t tmp_int[nFrames*Channels];
+			int32_t tmp_int[nFrames*Channels];
 
 			if(nMasterVolume > 0.0)
 			{
@@ -1328,11 +1330,11 @@ void CMiniDexed::ProcessSound (void)
 						}
 					}
 				}
-				arm_float_to_q15(tmp_float,tmp_int,nFrames*Channels);
+				arm_float_to_q23(tmp_float,tmp_int,nFrames*Channels);
 			}
 			else
 			{
-				arm_fill_q15(0, tmp_int, nFrames*Channels);
+				arm_fill_q31(0, tmp_int, nFrames*Channels);
 			}
 
 			// Prevent PCM510x analog mute from kicking in
@@ -1356,7 +1358,7 @@ void CMiniDexed::ProcessSound (void)
 
 			// BEGIN TG mixing
 			float32_t tmp_float[nFrames*2];
-			int16_t tmp_int[nFrames*2];
+			int32_t tmp_int[nFrames*2];
 
 			if(nMasterVolume > 0.0)
 			{
@@ -1422,11 +1424,11 @@ void CMiniDexed::ProcessSound (void)
 						tmp_float[(i*2)+1]=SampleBuffer[indexR][i];
 					}
 				}
-				arm_float_to_q15(tmp_float,tmp_int,nFrames*2);
+				arm_float_to_q23(tmp_float,tmp_int,nFrames*2);
 			}
 			else
 			{
-				arm_fill_q15(0, tmp_int, nFrames * 2);
+				arm_fill_q31(0, tmp_int, nFrames * 2);
 			}
 
 			// Prevent PCM510x analog mute from kicking in
