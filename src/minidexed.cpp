@@ -28,6 +28,8 @@
 #include <stdio.h>
 #include <assert.h>
 
+#include "arm_float_to_q23.h"
+
 LOGMODULE ("minidexed");
 
 CMiniDexed::CMiniDexed (CConfig *pConfig, CInterruptSystem *pInterrupt,
@@ -98,6 +100,8 @@ CMiniDexed::CMiniDexed (CConfig *pConfig, CInterruptSystem *pInterrupt,
 		m_nAftertouchTarget[i]=0;
 		
 		m_nReverbSend[i] = 0;
+
+		m_bEnabled[i] = 1;
 
 		// Active the required number of active TGs
 		if (i<m_nToneGenerators)
@@ -334,7 +338,7 @@ bool CMiniDexed::Initialize (void)
 		return false;
 	}
 
-	m_pSoundDevice->SetWriteFormat (SoundFormatSigned16, Channels);
+	m_pSoundDevice->SetWriteFormat (SoundFormatSigned24_32, Channels);
 
 	m_nQueueSizeFrames = m_pSoundDevice->GetQueueSizeFrames ();
 
@@ -438,7 +442,7 @@ void CMiniDexed::Run (unsigned nCore)
 		{
 			while (m_CoreStatus[nCore] != CoreStatusIdle)
 			{
-				// just wait
+				WaitForEvent ();
 			}
 		}
 
@@ -452,9 +456,11 @@ void CMiniDexed::Run (unsigned nCore)
 		while (1)
 		{
 			m_CoreStatus[nCore] = CoreStatusIdle;		// ready to be kicked
+			SendIPI (1, IPI_USER);
+
 			while (m_CoreStatus[nCore] == CoreStatusIdle)
 			{
-				// just wait
+				WaitForEvent ();
 			}
 
 			// now kicked from core 1
@@ -850,6 +856,24 @@ void CMiniDexed::setSustain(bool sustain, unsigned nTG)
 	m_pTG[nTG]->setSustain (sustain);
 }
 
+void CMiniDexed::setSostenuto(bool sostenuto, unsigned nTG)
+{
+	assert (nTG < CConfig::AllToneGenerators);
+	if (nTG >= m_nToneGenerators) return;  // Not an active TG
+
+	assert (m_pTG[nTG]);
+	m_pTG[nTG]->setSostenuto (sostenuto);
+}
+
+void CMiniDexed::setHoldMode(bool holdmode, unsigned nTG)
+{
+	assert (nTG < CConfig::AllToneGenerators);
+	if (nTG >= m_nToneGenerators) return;  // Not an active TG
+
+	assert (m_pTG[nTG]);
+	m_pTG[nTG]->setHold (holdmode);
+}
+
 void CMiniDexed::panic(uint8_t value, unsigned nTG)
 {
 	assert (nTG < CConfig::AllToneGenerators);
@@ -942,6 +966,7 @@ void CMiniDexed::SetParameter (TParameter Parameter, int nValue)
 			assert (m_pTG[nTG]);
 			m_pTG[nTG]->setCompressor (!!nValue);
 		}
+		m_UI.ParameterChanged ();
 		break;
 
 	case ParameterReverbEnable:
@@ -949,6 +974,7 @@ void CMiniDexed::SetParameter (TParameter Parameter, int nValue)
 		m_ReverbSpinLock.Acquire ();
 		reverb->set_bypass (!nValue);
 		m_ReverbSpinLock.Release ();
+		m_UI.ParameterChanged ();
 		break;
 
 	case ParameterReverbSize:
@@ -956,6 +982,7 @@ void CMiniDexed::SetParameter (TParameter Parameter, int nValue)
 		m_ReverbSpinLock.Acquire ();
 		reverb->size (nValue / 99.0f);
 		m_ReverbSpinLock.Release ();
+		m_UI.ParameterChanged ();
 		break;
 
 	case ParameterReverbHighDamp:
@@ -963,6 +990,7 @@ void CMiniDexed::SetParameter (TParameter Parameter, int nValue)
 		m_ReverbSpinLock.Acquire ();
 		reverb->hidamp (nValue / 99.0f);
 		m_ReverbSpinLock.Release ();
+		m_UI.ParameterChanged ();
 		break;
 
 	case ParameterReverbLowDamp:
@@ -970,6 +998,7 @@ void CMiniDexed::SetParameter (TParameter Parameter, int nValue)
 		m_ReverbSpinLock.Acquire ();
 		reverb->lodamp (nValue / 99.0f);
 		m_ReverbSpinLock.Release ();
+		m_UI.ParameterChanged ();
 		break;
 
 	case ParameterReverbLowPass:
@@ -977,6 +1006,7 @@ void CMiniDexed::SetParameter (TParameter Parameter, int nValue)
 		m_ReverbSpinLock.Acquire ();
 		reverb->lowpass (nValue / 99.0f);
 		m_ReverbSpinLock.Release ();
+		m_UI.ParameterChanged ();
 		break;
 
 	case ParameterReverbDiffusion:
@@ -984,6 +1014,7 @@ void CMiniDexed::SetParameter (TParameter Parameter, int nValue)
 		m_ReverbSpinLock.Acquire ();
 		reverb->diffusion (nValue / 99.0f);
 		m_ReverbSpinLock.Release ();
+		m_UI.ParameterChanged ();
 		break;
 
 	case ParameterReverbLevel:
@@ -991,6 +1022,7 @@ void CMiniDexed::SetParameter (TParameter Parameter, int nValue)
 		m_ReverbSpinLock.Acquire ();
 		reverb->level (nValue / 99.0f);
 		m_ReverbSpinLock.Release ();
+		m_UI.ParameterChanged ();
 		break;
 
 	case ParameterPerformanceSelectChannel:
@@ -1035,6 +1067,7 @@ void CMiniDexed::SetTGParameter (TTGParameter Parameter, int nValue, unsigned nT
 	case TGParameterPortamentoGlissando:	setPortamentoGlissando (nValue, nTG);	break;
 	case TGParameterPortamentoTime:		setPortamentoTime (nValue, nTG);	break;
 	case TGParameterMonoMode:		setMonoMode (nValue , nTG);	break; 
+	case TGParameterEnabled:		setEnabled (nValue, nTG);	break;
 	
 	case TGParameterMWRange:					setModController(0, 0, nValue, nTG); break;
 	case TGParameterMWPitch:					setModController(0, 1, nValue, nTG); break;
@@ -1092,6 +1125,7 @@ int CMiniDexed::GetTGParameter (TTGParameter Parameter, unsigned nTG)
 	case TGParameterPortamentoGlissando:	return m_nPortamentoGlissando[nTG];
 	case TGParameterPortamentoTime:		return m_nPortamentoTime[nTG];
 	case TGParameterMonoMode:		return m_bMonoMode[nTG] ? 1 : 0; 
+	case TGParameterEnabled:		return m_bEnabled[nTG] ? 1 : 0; 
 	
 	case TGParameterMWRange:					return getModController(0, 0, nTG);
 	case TGParameterMWPitch:					return getModController(0, 1, nTG);
@@ -1142,6 +1176,7 @@ void CMiniDexed::SetVoiceParameter (uint8_t uchOffset, uint8_t uchValue, unsigne
 			}
 
 			m_pTG[nTG]->setOPAll (m_uchOPMask[nTG]);
+			m_UI.ParameterChanged ();
 
 			return;
 		}
@@ -1153,6 +1188,7 @@ void CMiniDexed::SetVoiceParameter (uint8_t uchOffset, uint8_t uchValue, unsigne
 	assert (uchOffset < 156);
 
 	m_pTG[nTG]->setVoiceDataElement (uchOffset, uchValue);
+	m_UI.ParameterChanged ();
 }
 
 uint8_t CMiniDexed::GetVoiceParameter (uint8_t uchOffset, unsigned nOP, unsigned nTG)
@@ -1189,7 +1225,7 @@ std::string CMiniDexed::GetVoiceName (unsigned nTG)
 	if (nTG < m_nToneGenerators)
 	{
 		assert (m_pTG[nTG]);
-		m_pTG[nTG]->setName (VoiceName);
+		m_pTG[nTG]->getName (VoiceName);
 	}
 	std::string Result (VoiceName);
 	return Result;
@@ -1213,8 +1249,8 @@ void CMiniDexed::ProcessSound (void)
 		m_pTG[0]->getSamples (SampleBuffer, nFrames);
 
 		// Convert single float array (mono) to int16 array
-		int16_t tmp_int[nFrames];
-		arm_float_to_q15(SampleBuffer,tmp_int,nFrames);
+		int32_t tmp_int[nFrames];
+		arm_float_to_q23(SampleBuffer,tmp_int,nFrames);
 
 		if (m_pSoundDevice->Write (tmp_int, sizeof(tmp_int)) != (int) sizeof(tmp_int))
 		{
@@ -1250,6 +1286,7 @@ void CMiniDexed::ProcessSound (void)
 		{
 			assert (m_CoreStatus[nCore] == CoreStatusIdle);
 			m_CoreStatus[nCore] = CoreStatusBusy;
+			SendIPI (nCore, IPI_USER);
 		}
 
 		// process the TGs assigned to core 1
@@ -1265,7 +1302,7 @@ void CMiniDexed::ProcessSound (void)
 		{
 			while (m_CoreStatus[nCore] != CoreStatusIdle)
 			{
-				// just wait
+				WaitForEvent ();
 			}
 		}
 
@@ -1281,7 +1318,7 @@ void CMiniDexed::ProcessSound (void)
 			// Note: one TG per audio channel; output=mono; no processing.
 			const int Channels = 8;  // One TG per channel
 			float32_t tmp_float[nFrames*Channels];
-			int16_t tmp_int[nFrames*Channels];
+			int32_t tmp_int[nFrames*Channels];
 
 			if(nMasterVolume > 0.0)
 			{
@@ -1303,11 +1340,11 @@ void CMiniDexed::ProcessSound (void)
 						}
 					}
 				}
-				arm_float_to_q15(tmp_float,tmp_int,nFrames*Channels);
+				arm_float_to_q23(tmp_float,tmp_int,nFrames*Channels);
 			}
 			else
 			{
-				arm_fill_q15(0, tmp_int, nFrames*Channels);
+				arm_fill_q31(0, tmp_int, nFrames*Channels);
 			}
 
 			// Prevent PCM510x analog mute from kicking in
@@ -1331,7 +1368,7 @@ void CMiniDexed::ProcessSound (void)
 
 			// BEGIN TG mixing
 			float32_t tmp_float[nFrames*2];
-			int16_t tmp_int[nFrames*2];
+			int32_t tmp_int[nFrames*2];
 
 			if(nMasterVolume > 0.0)
 			{
@@ -1397,11 +1434,11 @@ void CMiniDexed::ProcessSound (void)
 						tmp_float[(i*2)+1]=SampleBuffer[indexR][i];
 					}
 				}
-				arm_float_to_q15(tmp_float,tmp_int,nFrames*2);
+				arm_float_to_q23(tmp_float,tmp_int,nFrames*2);
 			}
 			else
 			{
-				arm_fill_q15(0, tmp_int, nFrames * 2);
+				arm_fill_q31(0, tmp_int, nFrames * 2);
 			}
 
 			// Prevent PCM510x analog mute from kicking in
@@ -1534,6 +1571,17 @@ void CMiniDexed::setMonoMode(uint8_t mono, uint8_t nTG)
 	m_bMonoMode[nTG]= mono != 0; 
 	m_pTG[nTG]->setMonoMode(constrain(mono, 0, 1));
 	m_pTG[nTG]->doRefreshVoice();
+	m_UI.ParameterChanged ();
+}
+
+void CMiniDexed::setEnabled (uint8_t enabled, uint8_t nTG)
+{
+	assert (nTG < CConfig::AllToneGenerators);
+	if (nTG >= m_nToneGenerators) return;  // Not an active TG
+	assert (m_pTG[nTG]);
+
+	m_bEnabled[nTG] = enabled != 0;
+	
 	m_UI.ParameterChanged ();
 }
 
@@ -1814,6 +1862,33 @@ void CMiniDexed::setMasterVolume(float32_t vol)
     nMasterVolume = vol;
 }
 
+void CMiniDexed::DisplayWrite (const char *pMenu, const char *pParam, const char *pValue,
+			       bool bArrowDown, bool bArrowUp)
+{
+	m_UI.DisplayWrite (pMenu, pParam, pValue, bArrowDown, bArrowUp);
+
+	for (unsigned i = 0; i < CConfig::MaxUSBMIDIDevices; i++)
+	{
+		m_pMIDIKeyboard[i]->DisplayWrite (pMenu, pParam, pValue, bArrowDown, bArrowUp);
+	}
+}
+
+void CMiniDexed::UpdateDAWState ()
+{
+	for (unsigned i = 0; i < CConfig::MaxUSBMIDIDevices; i++)
+	{
+		m_pMIDIKeyboard[i]->UpdateDAWState ();
+	}
+}
+
+void CMiniDexed::UpdateDAWMenu (CUIMenu::TCPageType Type, s8 ucPage, u8 ucOP, u8 ucTG)
+{
+	for (unsigned i = 0; i < CConfig::MaxUSBMIDIDevices; i++)
+	{
+		m_pMIDIKeyboard[i]->UpdateDAWMenu (Type, ucPage, ucOP, ucTG);
+	}
+}
+
 std::string CMiniDexed::GetPerformanceFileName(unsigned nID)
 {
 	return m_PerformanceConfig.GetPerformanceFileName(nID);
@@ -1977,6 +2052,7 @@ void CMiniDexed::LoadPerformanceParameters(void)
 			m_pTG[nTG]->loadVoiceParameters(tVoiceData); 
 			}
 			setMonoMode(m_PerformanceConfig.GetMonoMode(nTG) ? 1 : 0, nTG); 
+			setEnabled(1, nTG);
 			SetReverbSend (m_PerformanceConfig.GetReverbSend (nTG), nTG);
 					
 			setModWheelRange (m_PerformanceConfig.GetModulationWheelRange (nTG),  nTG);
@@ -2000,6 +2076,8 @@ void CMiniDexed::LoadPerformanceParameters(void)
 		SetParameter (ParameterReverbLowPass, m_PerformanceConfig.GetReverbLowPass ());
 		SetParameter (ParameterReverbDiffusion, m_PerformanceConfig.GetReverbDiffusion ());
 		SetParameter (ParameterReverbLevel, m_PerformanceConfig.GetReverbLevel ());
+
+		m_UI.DisplayChanged ();
 }
 
 std::string CMiniDexed::GetNewPerformanceDefaultName(void)	
@@ -2031,7 +2109,7 @@ void CMiniDexed::SetVoiceName (const std::string &VoiceName, unsigned nTG)
 	char Name[11];
 	strncpy(Name, VoiceName.c_str(),10);
 	Name[10] = '\0';
-	m_pTG[nTG]->getName (Name);
+	m_pTG[nTG]->setName (Name);
 }
 
 bool CMiniDexed::DeletePerformance(unsigned nID)
