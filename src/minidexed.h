@@ -141,6 +141,7 @@ public:
 	unsigned GetActualPerformanceBankID();
 	void SetActualPerformanceBankID(unsigned nBankID);
 	bool SetNewPerformance(unsigned nID);
+	bool SetNewPerformance2(unsigned nID);
 	bool SetNewPerformanceBank(unsigned nBankID);
 	void SetFirstPerformance(void);
 	void DoSetFirstPerformance(void);
@@ -148,6 +149,7 @@ public:
 	
 	bool DoSavePerformanceNewFile (void);
 	bool DoSetNewPerformance (void);
+	bool DoSetNewPerformance2 (void);
 	bool DoSetNewPerformanceBank (void);
 	bool GetPerformanceSelectToLoad(void);
 	bool SavePerformance (bool bSaveAsDeault);
@@ -247,7 +249,7 @@ public:
 private:
 	int16_t ApplyNoteLimits (int16_t pitch, unsigned nTG);	// returns < 0 to ignore note
 	uint8_t m_uchOPMask[CConfig::AllToneGenerators];
-	void LoadPerformanceParameters(void); 
+	void LoadPerformanceParameters(unsigned part); 
 	void ProcessSound (void);
 	const char* GetNetworkDeviceShortName() const;
 
@@ -355,13 +357,16 @@ private:
 	bool m_bSavePerformance;
 	bool m_bSavePerformanceNewFile;
 	bool m_bSetNewPerformance;
-	unsigned m_nSetNewPerformanceID;	
+	bool m_bSetNewPerformance2;
+	unsigned m_nSetNewPerformanceID;
+	unsigned m_nSetNewPerformanceID2;
 	bool m_bSetNewPerformanceBank;
 	unsigned m_nSetNewPerformanceBankID;	
 	bool m_bSetFirstPerformance;
 	bool	m_bDeletePerformance;
 	unsigned m_nDeletePerformanceID;
 	bool m_bLoadPerformanceBusy;
+	bool m_bLoadPerformanceBusy2;
 	bool m_bLoadPerformanceBankBusy;
 	bool m_bSaveAsDeault;
 };
