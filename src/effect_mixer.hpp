@@ -22,7 +22,10 @@ public:
 	{
 		buffer_length=len;
 		for (uint8_t i=0; i<NN; i++)
+		{
 			multiplier[i] = UNITY_GAIN;
+			multiplier_w[i] = UNITY_GAIN;
+		}
 
 		sumbufL=new float32_t[buffer_length];
 		arm_fill_f32(0.0f, sumbufL, len);
@@ -52,7 +55,7 @@ public:
 			gain = MAX_GAIN;
 		else if (gain < MIN_GAIN)
 			gain = MIN_GAIN;
-		multiplier[channel] = powf(gain, 4); // see: https://www.dr-lex.be/info-stuff/volumecontrols.html#ideal2
+		multiplier_w[channel] = powf(gain, 4); // see: https://www.dr-lex.be/info-stuff/volumecontrols.html#ideal2
 	}
 
 	void gain(float32_t gain)
@@ -63,7 +66,7 @@ public:
 				gain = MAX_GAIN;
 			else if (gain < MIN_GAIN)
 				gain = MIN_GAIN;
-			multiplier[i] = powf(gain, 4); // see: https://www.dr-lex.be/info-stuff/volumecontrols.html#ideal2
+			multiplier_w[i] = powf(gain, 4); // see: https://www.dr-lex.be/info-stuff/volumecontrols.html#ideal2
 		} 
 	}
 
@@ -79,6 +82,7 @@ public:
 
 protected:
 	float32_t multiplier[NN];
+	float32_t multiplier_w[NN];
 	float32_t* sumbufL;
 	uint16_t buffer_length;
 };
@@ -92,6 +96,8 @@ public:
 		{
 			panorama[i][0] = UNITY_PANORAMA;
 			panorama[i][1] = UNITY_PANORAMA;
+			panorama_w[i][0] = UNITY_PANORAMA;
+			panorama_w[i][1] = UNITY_PANORAMA;
 		}
 
 		sumbufR=new float32_t[buffer_length];
@@ -101,6 +107,26 @@ public:
 	~AudioStereoMixer()
 	{
 		delete [] sumbufR;
+	}
+
+	uint32_t find_zc_f32(const float32_t *pSrc, uint32_t blockSize)
+	{
+		const float32_t *pIn = pSrc;
+		uint32_t blkCnt = blockSize;
+
+		pIn++;
+		blkCnt--;
+
+		while (blkCnt > 0U)
+		{
+			if (*pIn >= 0 && *(pIn - 1) < 0)
+				return blockSize - blkCnt;
+
+			pIn++;
+			blkCnt--;
+		}
+
+		return blockSize;
 	}
 
         void pan(uint8_t channel, float32_t pan)
@@ -113,22 +139,38 @@ public:
 			pan = MIN_PANORAMA;
 
 		// From: https://stackoverflow.com/questions/67062207/how-to-pan-audio-sample-data-naturally
-		panorama[channel][0]=arm_cos_f32(mapfloat(pan, MIN_PANORAMA, MAX_PANORAMA, 0.0, M_PI/2.0));
-		panorama[channel][1]=arm_sin_f32(mapfloat(pan, MIN_PANORAMA, MAX_PANORAMA, 0.0, M_PI/2.0));
+		panorama_w[channel][0]=arm_cos_f32(mapfloat(pan, MIN_PANORAMA, MAX_PANORAMA, 0.0, M_PI/2.0));
+		panorama_w[channel][1]=arm_sin_f32(mapfloat(pan, MIN_PANORAMA, MAX_PANORAMA, 0.0, M_PI/2.0));
 	}
 
 	void doAddMix(uint8_t channel, float32_t* in)
 	{
 		float32_t tmp[buffer_length];
-
+		uint32_t zc;
 		assert(in);
 
-		// left
-		arm_scale_f32(in, panorama[channel][0] * multiplier[channel], tmp, buffer_length);
-		arm_add_f32(sumbufL, tmp, sumbufL, buffer_length);
-		// right
-		arm_scale_f32(in, panorama[channel][1] * multiplier[channel], tmp, buffer_length);
-		arm_add_f32(sumbufR, tmp, sumbufR, buffer_length);
+		if ((panorama[channel][0] != panorama_w[channel][0] || multiplier[channel] != multiplier_w[channel]) &&
+			(zc = find_zc_f32(in, buffer_length)) != buffer_length)
+		{
+			arm_scale_f32(in, panorama[channel][0] * multiplier[channel], tmp, zc);
+			arm_scale_f32(in + zc, panorama_w[channel][0] * multiplier_w[channel], tmp + zc, buffer_length - zc);
+			arm_add_f32(sumbufL, tmp, sumbufL, buffer_length);
+			panorama[channel][0] = panorama_w[channel][0];
+
+			arm_scale_f32(in, panorama[channel][1] * multiplier[channel], tmp, zc);
+			arm_scale_f32(in + zc, panorama_w[channel][1] * multiplier_w[channel], tmp + zc, buffer_length - zc);
+			arm_add_f32(sumbufR, tmp, sumbufR, buffer_length);
+			panorama[channel][1] = panorama_w[channel][1];
+
+			multiplier[channel] = multiplier_w[channel];
+		}
+		else
+		{
+			arm_scale_f32(in, panorama[channel][0] * multiplier[channel], tmp, buffer_length);
+			arm_add_f32(sumbufL, tmp, sumbufL, buffer_length);
+			arm_scale_f32(in, panorama[channel][1] * multiplier[channel], tmp, buffer_length);
+			arm_add_f32(sumbufR, tmp, sumbufR, buffer_length);
+		}	
 	}
 
 	void getMix(float32_t* bufferL, float32_t* bufferR)
@@ -164,8 +206,10 @@ public:
 protected:
 	using AudioMixer<NN>::sumbufL;
 	using AudioMixer<NN>::multiplier;
+	using AudioMixer<NN>::multiplier_w;
 	using AudioMixer<NN>::buffer_length;
 	float32_t panorama[NN][2];
+	float32_t panorama_w[NN][2];
 	float32_t* sumbufR;
 };
 
